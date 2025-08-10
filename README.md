@@ -88,7 +88,7 @@ If the `-x` flag is not set, the machine will restart after the installation is 
 ## Preseed Config
 
 For an extended example, check:
-https://www.debian.org/releases/bookworm/example-preseed.txt
+https://www.debian.org/releases/trixie/example-preseed.txt
 
 ## Debug in VM
 
