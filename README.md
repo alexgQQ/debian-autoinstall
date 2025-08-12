@@ -18,7 +18,7 @@ Start a [devbox](https://www.jetify.com/devbox) [shell](https://www.jetify.com/d
 devbox shell --pure
 ```
 
-Or install all dependencies on a Debian 12 system:
+Or install all dependencies on a Debian system:
 
 ```sh
 sudo apt update
@@ -93,5 +93,5 @@ https://www.debian.org/releases/trixie/example-preseed.txt
 ## Debug in VM
 
 While running the installer, press `ctrl`+`alt`+`f4` to show the installers log output.
-To switch back to the installers graphical interface, press `ctrl`+`alt`+`f1`.
+To switch back to the installer's graphical interface, press `ctrl`+`alt`+`f1`.
 Switch to any other TTY for an interactive shell.
