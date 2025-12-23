@@ -7,6 +7,7 @@
 *.ed25519
 /SHA256SUMS
 /SHA256SUMS.sign
-/devbox.lock/.vbox
+.vbox
 .vagrant
 /test*
+benchmarks/results/*.html

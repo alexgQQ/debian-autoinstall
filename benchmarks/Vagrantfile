@@ -1,0 +1,57 @@
+$create_report = <<-'SCRIPT'
+apt-get update -yq
+apt-get install -yq diffoscope
+diffoscope --html /vagrant/results/cpu.html /vagrant/results/*-cpu-test
+diffoscope --html /vagrant/results/memory.html /vagrant/results/*-memory-test
+diffoscope --html /vagrant/results/fileio.html /vagrant/results/*-fileio-test
+rm /vagrant/results/*-cpu-test
+rm /vagrant/results/*-memory-test
+rm /vagrant/results/*-fileio-test
+SCRIPT
+
+Vagrant.configure("2") do |config|
+
+    config.vm.define "debian" do |debian|
+        debian.vm.box = "debian/bookworm64"
+        debian.vm.provider "virtualbox" do |vb|
+            vb.name ="debian-benchmark"
+            vb.memory = 1024 * 2
+            vb.cpus = 2
+        end
+        debian.vm.provision "shell",
+            inline: "apt-get update -yqq && apt-get install -yqq sysbench debsums && dpkg --verify && debsums -c"
+        debian.vm.provision "shell",
+            path: "test.sh", args: ["debian", 256, "/vagrant/results"]
+        debian.vm.provision "shell",
+            inline: "shutdown now"
+    end
+
+    config.vm.define "vagrantbox" do |vagrantbox|
+        vagrantbox.vm.box = "vagrantbox"
+        vagrantbox.vm.provider "virtualbox" do |vb|
+            vb.name ="vagrantbox-benchmark"
+            vb.memory = 1024 * 2
+            vb.cpus = 2
+        end
+        vagrantbox.vm.provision "shell",
+            inline: "apt-get update -yqq && apt-get install -yqq sysbench debsums && dpkg --verify && debsums -c"
+        vagrantbox.vm.provision "shell",
+            path: "test.sh", args: ["vagrantbox", 256, "/vagrant/results"]
+        vagrantbox.vm.provision "shell",
+            inline: "shutdown now"
+    end
+
+    config.vm.define "reporter" do |reporter|
+        reporter.vm.box = "debian/bookworm64"
+        reporter.vm.provider "virtualbox" do |vb|
+            vb.name ="benchmark-reporter"
+            vb.memory = 1024 * 2
+            vb.cpus = 2
+        end
+        reporter.vm.provision "shell",
+            inline: $create_report
+        reporter.vm.provision "shell",
+            inline: "shutdown now"
+    end
+
+end
