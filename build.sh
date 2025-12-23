@@ -21,27 +21,24 @@ usage() {
     echo "  -h               Display this help message"
 }
 
-username="janitor"
-password="$(pwgen -ns 16 1)"
-password_mask="false"
-hostname="undefined"
-domain="home.arpa"
-iso_url="https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/debian-13.0.0-amd64-netinst.iso"
-sign_key="DA87E80D6294BE9B"
-out_file="$(basename "${iso_url}" | sed 's/netinst/auto/')"
-apt_pkgs=()
-poweroff=""
-sudonopw=""
+username="vagrant"
+password="vagrant"
+hostname="vagrantbox"
+domain="local"
+iso_url="https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/debian-13.2.0-amd64-netinst.iso"
+out_file="vagrantbox.iso"
+poweroff="true"
+sudonopw="true"
+vboxguest="true"
+noverify="false"
 
 while getopts u:p:n:d:a:i:s:o:xzvh opt; do
     case $opt in
     u) username="$OPTARG" ;;
-    p) password="$OPTARG" ; password_mask="true" ;;
+    p) password="$OPTARG" ;;
     n) hostname="$OPTARG" ;;
     d) domain="$OPTARG" ;;
-    a) apt_pkgs+=("$OPTARG") ;;
     i) iso_url="$OPTARG" ;;
-    s) sign_key="$OPTARG" ;;
     o) out_file="$OPTARG" ;;
     x) poweroff="true" ;;
     z) sudonopw="true" ;;
@@ -59,17 +56,23 @@ cd "$(realpath "$(dirname "$(readlink -f "$0")")")"
 iso_file=$(basename "${iso_url}")
 if [[ ! -f ${iso_file} ]]; then
     echo >&2 "Downloading iso image: ${iso_file}"
-    curl --progress-bar -Lo "${iso_file}" "${iso_url}"
+    curl -sLo "${iso_file}" "${iso_url}"
 fi
-curl -sSLO "$(dirname "${iso_url}")/SHA256SUMS"
-curl -sSLO "$(dirname "${iso_url}")/SHA256SUMS.sign"
 
-# verify
-gpg --keyserver keyring.debian.org --recv "${sign_key}"
-gpg --verify SHA256SUMS.sign SHA256SUMS
-if ! sha256sum -c <<<"$(grep "${iso_file}" SHA256SUMS)"; then
-    echo >&2 "Error: Checksum not matching for: ${iso_file}"
-    exit 1
+if test "${noverify}" = "false"; then
+    curl -sLO "$(dirname "${iso_url}")/SHA256SUMS"
+    curl -sLO "$(dirname "${iso_url}")/SHA256SUMS.sign"
+
+    # Make sure to load keys listed here https://www.debian.org/CD/verify
+    gpg --keyserver keyring.debian.org --recv "988021A964E6EA7D"
+    gpg --keyserver keyring.debian.org --recv "DA87E80D6294BE9B"
+    gpg --keyserver keyring.debian.org --recv "42468F4009EA8AC3"
+
+    gpg --verify SHA256SUMS.sign SHA256SUMS
+    if ! sha256sum -c <<<"$(grep "${iso_file}" SHA256SUMS)"; then
+        echo >&2 "Error: Checksum not matching for: ${iso_file}"
+        exit 1
+    fi
 fi
 
 workdir="$(mktemp --directory)"
@@ -92,9 +95,6 @@ cp -a installer/* "${workdir}"
 # generate password hash
 salt="$(pwgen -ns 16 1)"
 passhash="$(mkpasswd -m sha-512 -S "${salt}" "${password}")"
-if test "${password_mask}" == "true"; then
-    password="$(echo "${password}" | tr '[:print:]' 'x')"
-fi
 
 # replace tokens
 replace_token() {
@@ -104,7 +104,6 @@ replace_token "@USERNAME@" "${username}"
 replace_token "@PASSHASH@" "${passhash}"
 replace_token "@HOSTNAME@" "${hostname}"
 replace_token "@DOMAIN@"   "${domain}"
-replace_token "@PACKAGES@" "${apt_pkgs[*]}"
 
 # add poweroff option
 if test "${poweroff}" = "true"; then
@@ -118,6 +117,12 @@ if test "${sudonopw}" = "true"; then
     replace_token "@SUDONOPW@" "true"
 else
     replace_token "@SUDONOPW@" "false"
+fi
+
+if test "${vboxguest}" = "true"; then
+    replace_token "@VBOXGUEST@" "true"
+else
+    replace_token "@VBOXGUEST@" "false"
 fi
 
 # clear existing output iso file
@@ -135,23 +140,13 @@ rm -f "${iso_file//.iso/-auto.iso}"
 xorriso -indev "${iso_file}" \
     -map "${workdir}/adtxt.cfg"       "/isolinux/adtxt.cfg" \
     -map "${workdir}/isolinux.cfg"    "/isolinux/isolinux.cfg" \
-    -map "${workdir}/splash.png"      "/isolinux/splash.png" \
     -map "${workdir}/late.sh"         "/late.sh" \
     -map "${workdir}/preseed.cfg"     "/preseed.cfg" \
     -map "${workdir}/authorized_keys" "/configs/authorized_keys" \
-    -map "${workdir}/bashrc.bash"     "/configs/bashrc.bash" \
-    -map "${workdir}/issue"           "/configs/issue" \
-    -map "${workdir}/motd"            "/configs/motd" \
+    -map "${workdir}/grub"            "/configs/grub" \
     -map "${workdir}/sshd_config"     "/configs/sshd_config" \
     -boot_image isolinux dir=/isolinux \
     -outdev "${out_file}"
-
-echo "user: ${username}"
-echo "pass: ${password}"
-
-if test "${password_mask}" == "false"; then
-    printf "user: %s\npass: %s\n" "${username}" "${password}" > "${out_file}.auth"
-fi
 
 rm -rf "${workdir}"
 
