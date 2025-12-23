@@ -1,9 +1,12 @@
 /.idea/
 /.vscode/
 /*.auth
-/*.iso
-/*.sum
+*.iso
+*.sum
+*.box
+*.ed25519
 /SHA256SUMS
 /SHA256SUMS.sign
-/devbox.lock
-/configs/authorized_keys
+/devbox.lock/.vbox
+.vagrant
+/test*
