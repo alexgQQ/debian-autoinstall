@@ -3,7 +3,7 @@ apt-get update -yqq
 apt-get install -yqq curl git gnupg pwgen whois xorriso
 # writes are slow on the default shared mount point so build the image in the home dir and copy it back
 cp -r /vagrant /home/vagrant/debian-autoinstall
-./debian-autoinstall/build.sh
+./debian-autoinstall/build.sh -u vagrant -p vagrant -xza 
 cp debian-autoinstall/vagrantbox.iso /vagrant/dist
 SCRIPT
 

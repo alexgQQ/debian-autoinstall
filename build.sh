@@ -5,18 +5,18 @@ set -o nounset
 set -o pipefail
 
 usage() {
-    echo "Usage: $0 [-u username] [-p password] [-n hostname] [-d domain] [-a package] [-i iso_url] [-s sign_key] [-o path] [-x] [-z] [-v] [-h]"
+    echo "Usage: $0 [-u username] [-p password] [-n hostname] [-d domain] [-i version] [-o path] [-x] [-z] [-a] [-s] [-v] [-h]"
     echo "Options:"
     echo "  -u <username>    Admin username"
     echo "  -p <password>    Admin password"
     echo "  -n <hostname>    Machine hostname"
     echo "  -d <domain>      Machine domain"
-    echo "  -a <package>     Additional apt package"
-    echo "  -i <iso_url>     ISO download URL"
-    echo "  -s <sign_key>    ISO pgp sign key"
+    echo "  -i <version>     Debian version to build"
     echo "  -o <out_file>    ISO output file"
     echo "  -x               Power off after install"
     echo "  -z               Sudo without password"
+    echo "  -a               Install Virtualbox Guest Additions"
+    echo "  -s               Skip ISO download verification"
     echo "  -v               Enable verbose mode"
     echo "  -h               Display this help message"
 }
@@ -25,29 +25,33 @@ username="vagrant"
 password="vagrant"
 hostname="vagrantbox"
 domain="local"
-iso_url="https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/debian-13.2.0-amd64-netinst.iso"
+debian_version="13.2.0"
 out_file="vagrantbox.iso"
-poweroff="true"
-sudonopw="true"
-vboxguest="true"
+poweroff="false"
+sudonopw="false"
+vboxguest="false"
 noverify="false"
 
-while getopts u:p:n:d:a:i:s:o:xzvh opt; do
+while getopts u:p:n:d:i:o:xzasvh opt; do
     case $opt in
     u) username="$OPTARG" ;;
     p) password="$OPTARG" ;;
     n) hostname="$OPTARG" ;;
     d) domain="$OPTARG" ;;
-    i) iso_url="$OPTARG" ;;
+    i) debian_version="$OPTARG" ;;
     o) out_file="$OPTARG" ;;
     x) poweroff="true" ;;
     z) sudonopw="true" ;;
+    a) vboxguest="true" ;;
+    s) noverify="true" ;;
     v) set -o xtrace ;;
     h) usage ; exit 0 ;;
     *) usage ; exit 1 ;;
     esac
 done
 shift $((OPTIND - 1))
+
+iso_url="https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/debian-${debian_version}-amd64-netinst.iso"
 
 # go to project root
 cd "$(realpath "$(dirname "$(readlink -f "$0")")")"

@@ -36,3 +36,7 @@ GSSAPIAuthentication no
 
 X11Forwarding no
 AllowTcpForwarding no
+
+# To use vscode remote server we need tcp forwarding
+Match User @USERNAME@
+    AllowTcpForwarding yes
