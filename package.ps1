@@ -9,6 +9,7 @@ $disk_size = 1024 * 15  # 10 Gb
 $cpu_count = 2
 $mem_size = 1024 * 2  # 2 Gb
 $box_file = "dist\vagrantbox.box"
+$vram = 64  # MB
 
 function Create-VM {
     param (
@@ -20,7 +21,7 @@ function Create-VM {
         $iso_path
     )
     VBoxManage createvm --name $name --ostype Debian_64 --register
-    VBoxManage modifyvm $name --memory $memory --cpus $cpu --sata on --boot1 dvd --boot2 disk --pae on --graphicscontroller VMSVGA
+    VBoxManage modifyvm $name --memory $memory --cpus $cpu --vram=$vram --sata on --boot1 dvd --boot2 disk --pae on --graphicscontroller VMSVGA
     VBoxManage createmedium disk --filename $disk_path --size $disk_size --format VDI --variant Fixed
     # TODO: Sometimes this is registered as "SATA Controller" by default and that name needs to be used
     # but usually this command isn't even needed so figure what to do with it

@@ -1,101 +1,75 @@
-# debian-autoinstall
+# debian-autoinstall-vagrant
 
-Generate customized Debian ISO images for automatic deployments.
-
-## Usage
-
-Run `build.sh` to generate a hands-free ISO image.
-
-```
-./build.sh [-u username] [-p password] [-n hostname] [-d domain] [-a package] [-i iso_url] [-s sign_key] [-o path] [-x] [-z] [-v] [-h]
-```
+Generate customized Debian ISO images for automatic deployments and Vagrant base boxes. 
 
 ### Dependencies
 
-Start a [devbox](https://www.jetify.com/devbox) [shell](https://www.jetify.com/devbox/docs/quickstart/#launch-your-development-environment) with:
+This repo uses Vagrant and Virtualbox so I would recommend to use those. However if you are on a Debian based machine and are only trying to build an automatic installing ISO then you can skip them and just run the build script.
 
-```sh
-devbox shell --pure
-```
-
-Or install all dependencies on a Debian system:
-
-```sh
-sudo apt update
-sudo apt install curl git gnupg pwgen whois xorriso
-```
-
-### Clone repo
-
-Clone this repository and `cd` into it.
-
-```sh
-git clone https://github.com/nothub/debian-autoinstall.git
+Clone the repo
+```bash
+git clone https://github.com/alexgQQ/debian-autoinstall.git
 cd debian-autoinstall
-```
-
-### SSH keys
-
-To include SSH keys for remote access, add them to the `configs/authorized_keys` file.
-
-```sh
-curl -fsSLo configs/authorized_keys https://github.com/nothub.keys
-echo "ssh-ed25519 AAAA... foo" >> configs/authorized_keys
-echo "ssh-ed25519 AAAA... bar" >> configs/authorized_keys
 ```
 
 ### Build ISO
 
-```sh
-# set user and password
-./build.sh -u 'hub' -p 'changeme'
-# set hostname and domain
-./build.sh -n 'calculon' -d 'example.org'
-# include additional apt packages
-./build.sh -a 'strace' -a 'unattended-upgrades'
+On a Debian based machine just install the dependencies and run the build script. 
+
+```bash
+sudo apt-get update
+sudo apt-get install curl git gnupg pwgen whois xorriso
+./build.sh -u 'vagrant' -p 'vagrant' -xza -o dist/debian.iso
 ```
 
-### Flags
+Otherwise on other machines use vagrant. This will run the above through a debian based vagrant vm. Build args can be changed in the root Vagrantfile.
 
-```
--u <username>    Admin username
--p <password>    Admin password
--n <hostname>    Machine hostname
--d <domain>      Machine domain
--a <package>     Additional apt package
--i <iso_url>     ISO download URL
--s <sign_key>    ISO pgp sign key
--o <out_file>    ISO output file
--x               Power off after install
--z               Sudo without password
--v               Enable verbose mode
--h               Display this help message
+```powershell
+vagrant up
 ```
 
-### Password
+By default the ISO file will be in the `dist` dir.
 
-If the `-p` flag is not set, a random admin password will be generated, printed to stdout and written to `<out_file>.auth`.
+Customize the installation however you would like with the flags below.
+```
+./build.sh [-u username] [-p password] [-n hostname] [-d domain] [-i version] [-o path] [-x] [-z] [-a] [-s] [-v] [-h]
+Options:
+  -u <username>    Admin username
+  -p <password>    Admin password
+  -n <hostname>    Machine hostname
+  -d <domain>      Machine domain
+  -i <version>     Debian version to build
+  -o <out_file>    ISO output file
+  -x               Power off after install
+  -z               Sudo without password
+  -a               Install Virtualbox Guest Additions
+  -s               Skip ISO download verification
+  -v               Enable verbose mode
+  -h               Display this help message
+```
 
-### Hostname
+#### Debian Config
 
-If the `-n` flag is not set, a hostname will be generated at installation.
-The hostname will be based on the installed machines mac addresses.
-
-### Restart
-
-If the `-x` flag is not set, the machine will restart after the installation is finished.
-
-## Preseed Config
-
-For an extended example, check:
+This uses the preseed process for configuring an installation. Change it however you'd like. For an extended example, check:
 https://www.debian.org/releases/trixie/example-preseed.txt
 
-## Debug in VM
+To include SSH keys for remote access, add them to the `configs/authorized_keys` file. By default this has the vagrant default user public keys.
+```bash
+curl -fsSLo configs/authorized_keys https://github.com/hashicorp/vagrant/raw/refs/heads/main/keys/vagrant.pub
+```
 
-While running the installer, press `ctrl`+`alt`+`f4` to show the installers log output.
-To switch back to the installer's graphical interface, press `ctrl`+`alt`+`f1`.
-Switch to any other TTY for an interactive shell.
+The grub configuration in `configs/grub` can be adjusted for various boot options.
 
+Any specific shell commands or scripts can be added to `installer/late.sh` to run after provisioning.
+
+### Package Vagrant Box
+
+With the ISO from the previous step provision a Virtualbox VM to boot from it. Vagrant uses this VM to export a baseline config so it will serve as that. With the default commands just run:
+```powershell
+./package.ps1
+```
+
+Then in `dist` dir there will be an exported vagrant box `.box` file with the OS and the VM config.
 
 ### Troubleshooting
 
@@ -135,7 +109,7 @@ sudo systemd-analyse time
 sudo systemd-analyse blame
 ```
 Additionally check the startup logs for any errors, long running blocks or time blocking processes. 
-```
+```bash
 sudo dmesg
 ```
 
@@ -166,4 +140,15 @@ vagrant global-status --prune
 If those don;t work you can also just clear the file cache directly.
 ```bash
 sudo rm -rf ~/.vagrant.d/boxes/<yourboxname>
+```
+
+#### virtualbox guest additions issues
+
+Check the modules and versions are identified. Startup the vm with guest additions and access it to run:
+```bash
+lsmod | grep vboxguest
+```
+There hsould be a `vboxguest` kernel module loaded. Then on the host machine check that Virtualbox can identify the version.
+```powershell
+VBoxManage guestproperty get "vagrant-packager" /VirtualBox/GuestAdd/Version
 ```
